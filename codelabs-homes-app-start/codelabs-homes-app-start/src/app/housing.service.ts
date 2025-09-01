@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HousingLocation } from './housing-location';
+import { Observable } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
 })
 export class HousingService {
   readonly baseUrl = 'https://angular.io/assets/images/tutorials/faa';
-
+  private apiUrl = 'http://localhost:3000/';  // Your backend API
   protected housingLocationList: HousingLocation[] = [
     {
       id: 0,
@@ -110,15 +112,23 @@ export class HousingService {
     }
   ];
 
+   constructor(private http: HttpClient) {}  // <-- Inject HttpClient
+
   getAllHousingLocations(): HousingLocation[] {
-    return this.housingLocationList;
-  }
+  return this.housingLocationList;
+}
 
   getHousingLocationById(id: number): HousingLocation | undefined {
-    return this.housingLocationList.find(housingLocation => housingLocation.id === id);
+    return this.housingLocationList.find(h => h.id === id);
   }
 
-  submitApplication(firstName: string, lastName: string, email: string) {
-    console.log(`Homes application received: firstName: ${firstName}, lastName: ${lastName}, email: ${email}.`);
+  submitApplication(data: any): Observable<any> {
+    console.log('Posting to:', this.apiUrl); // Debug print
+    return this.http.post(this.apiUrl, data);
   }
+
 }
+
+ 
+
+ 

@@ -4,14 +4,12 @@ import { ActivatedRoute } from '@angular/router';
 import { HousingService } from '../housing.service';
 import { HousingLocation } from '../housing-location';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 
 @Component({
   selector: 'app-details',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule
-  ],
+  imports: [CommonModule, ReactiveFormsModule, HttpClientModule],
   template: `
     <article>
       <img class="listing-photo" [src]="housingLocation?.photo"
@@ -30,33 +28,38 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
       </section>
       <section class="listing-apply">
         <h2 class="section-heading">Apply now to live here</h2>
-        <form [formGroup]="applyForm" (submit)="submitApplication()">
+        <form [formGroup]="applyForm" (ngSubmit)="submitApplication()">
           <label for="first-name">First Name</label>
-          <input id="first-name" type="text" formControlName="firstName">
+          <input id="first-name" type="text" formControlName="firstName" required>
 
           <label for="last-name">Last Name</label>
-          <input id="last-name" type="text" formControlName="lastName">
+          <input id="last-name" type="text" formControlName="lastName" required>
 
           <label for="email">Email</label>
-          <input id="email" type="email" formControlName="email">
-          <button type="submit" class="primary">Apply now</button>
+          <input id="email" type="email" formControlName="email" required>
+
+          <button type="submit" class="primary" [disabled]="applyForm.invalid">Apply now</button>
         </form>
+        <p *ngIf="submissionMessage">{{ submissionMessage }}</p>
       </section>
     </article>
   `,
   styleUrls: ['./details.component.css'],
 })
 export class DetailsComponent {
+  private route = inject(ActivatedRoute);
+  private housingService = inject(HousingService);
+  private http = inject(HttpClient);
 
-  route: ActivatedRoute = inject(ActivatedRoute);
-  housingService = inject(HousingService);
   housingLocation: HousingLocation | undefined;
 
   applyForm = new FormGroup({
     firstName: new FormControl(''),
     lastName: new FormControl(''),
-    email: new FormControl('')
+    email: new FormControl(''),
   });
+
+  submissionMessage = '';
 
   constructor() {
     const housingLocationId = parseInt(this.route.snapshot.params['id'], 10);
@@ -64,11 +67,29 @@ export class DetailsComponent {
   }
 
   submitApplication() {
-    this.housingService.submitApplication(
-      this.applyForm.value.firstName ?? '',
-      this.applyForm.value.lastName ?? '',
-      this.applyForm.value.email ?? ''
-    );
+  if (this.applyForm.invalid) {
+    this.submissionMessage = 'Please fill all required fields correctly.';
+    return;
   }
 
-}
+  const formValue = this.applyForm.value;
+
+  const data = {
+    title: `${formValue.firstName} ${formValue.lastName}`,
+    completed: false,
+    email: formValue.email,
+  };
+
+  this.housingService.submitApplication(data).subscribe({
+    next: (res) => {
+      this.submissionMessage = 'Application submitted successfully!';
+      this.applyForm.reset();
+    },
+    error: (err) => {
+      console.error('Error:', err);
+      this.submissionMessage = 'Submission failed. Please try again.';
+    },
+    });
+   }
+  }
+
